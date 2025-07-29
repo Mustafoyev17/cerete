@@ -1,0 +1,29 @@
+{
+  "manifest_version": 3,
+  "name": "Mobile Instagram Data Collector",
+  "version": "1.0",
+  "description": "Collect Instagram data from mobile browser",
+  "permissions": [
+    "activeTab",
+    "storage",
+    "scripting"
+  ],
+  "host_permissions": [
+    "https://*.instagram.com/*",
+    "https://m.instagram.com/*",
+    "http://localhost:3000/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "https://*.instagram.com/*",
+        "https://m.instagram.com/*"
+      ],
+      "js": ["mobile-content.js"],
+      "run_at": "document_end"
+    }
+  ],
+  "background": {
+    "service_worker": "mobile-background.js"
+  }
+} 
