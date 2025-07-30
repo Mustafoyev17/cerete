@@ -18,7 +18,7 @@ const buttonVariants = cva(
           "bg-secondary text-secondary-foreground hover:bg-secondary/80",
         ghost: "hover:bg-accent hover:text-accent-foreground",
         link: "text-primary underline-offset-4 hover:underline",
-        instagram: "bg-instagram-blue text-white hover:bg-instagram-blue/90 font-semibold",
+        instagram: "bg-[#0095f6] text-white hover:bg-[#0081d6] font-semibold",
         facebook: "bg-[#1877f2] text-white hover:bg-[#166fe5] font-semibold",
       },
       size: {

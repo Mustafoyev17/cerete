@@ -41,6 +41,7 @@ All colors MUST be HSL.
     --instagram-light-text: 0 0% 55%;
     --instagram-border: 0 0% 85%;
     --instagram-bg: 0 0% 99%;
+    --instagram-font: 'Instagram Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
 
     --radius: 0.5rem;
 
@@ -108,4 +109,35 @@ All colors MUST be HSL.
   body {
     @apply bg-background text-foreground;
   }
+}
+
+/* Instagram specific styles */
+.instagram-font {
+  font-family: var(--instagram-font);
+  font-weight: 400;
+  letter-spacing: 0.1px;
+}
+
+.bg-instagram-bg {
+  background-color: hsl(var(--instagram-bg));
+}
+
+.text-instagram-text {
+  color: hsl(var(--instagram-text));
+}
+
+.text-instagram-light-text {
+  color: hsl(var(--instagram-light-text));
+}
+
+.border-instagram-border {
+  border-color: hsl(var(--instagram-border));
+}
+
+.bg-instagram-blue {
+  background-color: hsl(var(--instagram-blue));
+}
+
+.text-instagram-blue {
+  color: hsl(var(--instagram-blue));
 }

